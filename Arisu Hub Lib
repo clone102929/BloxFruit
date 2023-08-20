@@ -11,7 +11,6 @@ local OrionLib = {
 	Elements = {},
 	ThemeObjects = {},
 	Connections = {},
-	Flags = {},
 	Themes = {
 		Default = {
 			Main = Color3.fromRGB(25, 25, 25),
@@ -23,8 +22,6 @@ local OrionLib = {
 		}
 	},
 	SelectedTheme = "Default",
-	Folder = nil,
-	SaveCfg = false
 }
 
 --Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
@@ -418,7 +415,20 @@ function OrionLib:MakeNotification(NotificationConfig)
 	end)
 end    
 
-
+function OrionLib:Init()
+	if OrionLib.SaveCfg then	
+		pcall(function()
+			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
+				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
+				OrionLib:MakeNotification({
+					Name = "Configuration",
+					Content = "Auto-loaded configuration for the game " .. game.GameId .. ".",
+					Time = 5
+				})
+			end
+		end)		
+	end	
+end	
 
 function OrionLib:MakeWindow(WindowConfig)
 	local FirstTab = true
@@ -873,6 +883,8 @@ function OrionLib:MakeWindow(WindowConfig)
 				ToggleConfig.Callback = ToggleConfig.Callback or function() end
 				ToggleConfig.Color = ToggleConfig.Color or Color3.fromRGB(9, 99, 195)
 
+				local Toggle = {Value = ToggleConfig.Default}
+
 				local Click = SetProps(MakeElement("Button"), {
 					Size = UDim2.new(1, 0, 1, 0)
 				})
@@ -938,10 +950,6 @@ function OrionLib:MakeWindow(WindowConfig)
 				AddConnection(Click.MouseButton1Down, function()
 					TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 6)}):Play()
 				end)
-
-				if ToggleConfig.Flag then
-					OrionLib.Flags[ToggleConfig.Flag] = Toggle
-				end	
 				return Toggle
 			end  
 			function ElementFunction:AddSlider(SliderConfig)
@@ -954,10 +962,8 @@ function OrionLib:MakeWindow(WindowConfig)
 				SliderConfig.Callback = SliderConfig.Callback or function() end
 				SliderConfig.ValueName = SliderConfig.ValueName or ""
 				SliderConfig.Color = SliderConfig.Color or Color3.fromRGB(9, 149, 98)
-				SliderConfig.Flag = SliderConfig.Flag or nil
-				SliderConfig.Save = SliderConfig.Save or false
 
-				local Slider = {Value = SliderConfig.Default, Save = SliderConfig.Save}
+				local Slider = {Value = SliderConfig.Default}
 				local Dragging = false
 
 				local SliderDrag = SetChildren(SetProps(MakeElement("RoundFrame", SliderConfig.Color, 0, 5), {
@@ -1034,9 +1040,6 @@ function OrionLib:MakeWindow(WindowConfig)
 				end      
 
 				Slider:Set(Slider.Value)
-				if SliderConfig.Flag then				
-					OrionLib.Flags[SliderConfig.Flag] = Slider
-				end
 				return Slider
 			end  
 			function ElementFunction:AddDropdown(DropdownConfig)
@@ -1045,10 +1048,8 @@ function OrionLib:MakeWindow(WindowConfig)
 				DropdownConfig.Options = DropdownConfig.Options or {}
 				DropdownConfig.Default = DropdownConfig.Default or ""
 				DropdownConfig.Callback = DropdownConfig.Callback or function() end
-				DropdownConfig.Flag = DropdownConfig.Flag or nil
-				DropdownConfig.Save = DropdownConfig.Save or false
 
-				local Dropdown = {Value = DropdownConfig.Default, Options = DropdownConfig.Options, Buttons = {}, Toggled = false, Type = "Dropdown", Save = DropdownConfig.Save}
+				local Dropdown = {Value = DropdownConfig.Default, Options = DropdownConfig.Options, Buttons = {}, Toggled = false, Type = "Dropdown"}
 				local MaxElements = 5
 
 				if not table.find(Dropdown.Options, Dropdown.Value) then
@@ -1189,9 +1190,6 @@ function OrionLib:MakeWindow(WindowConfig)
 
 				Dropdown:Refresh(Dropdown.Options, false)
 				Dropdown:Set(Dropdown.Value)
-				if DropdownConfig.Flag then				
-					OrionLib.Flags[DropdownConfig.Flag] = Dropdown
-				end
 				return Dropdown
 			end
 			function ElementFunction:AddBind(BindConfig)
@@ -1199,10 +1197,8 @@ function OrionLib:MakeWindow(WindowConfig)
 				BindConfig.Default = BindConfig.Default or Enum.KeyCode.Unknown
 				BindConfig.Hold = BindConfig.Hold or false
 				BindConfig.Callback = BindConfig.Callback or function() end
-				BindConfig.Flag = BindConfig.Flag or nil
-				BindConfig.Save = BindConfig.Save or false
 
-				local Bind = {Value, Binding = false, Type = "Bind", Save = BindConfig.Save}
+				local Bind = {Value, Binding = false, Type = "Bind"}
 				local Holding = false
 
 				local Click = SetProps(MakeElement("Button"), {
@@ -1311,9 +1307,6 @@ function OrionLib:MakeWindow(WindowConfig)
 				end
 
 				Bind:Set(BindConfig.Default)
-				if BindConfig.Flag then				
-					OrionLib.Flags[BindConfig.Flag] = Bind
-				end
 				return Bind
 			end  
 			function ElementFunction:AddTextbox(TextboxConfig)
@@ -1400,11 +1393,9 @@ function OrionLib:MakeWindow(WindowConfig)
 				ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
 				ColorpickerConfig.Default = ColorpickerConfig.Default or Color3.fromRGB(255,255,255)
 				ColorpickerConfig.Callback = ColorpickerConfig.Callback or function() end
-				ColorpickerConfig.Flag = ColorpickerConfig.Flag or nil
-				ColorpickerConfig.Save = ColorpickerConfig.Save or false
 
 				local ColorH, ColorS, ColorV = 1, 1, 1
-				local Colorpicker = {Value = ColorpickerConfig.Default, Toggled = false, Type = "Colorpicker", Save = ColorpickerConfig.Save}
+				local Colorpicker = {Value = ColorpickerConfig.Default, Toggled = false, Type = "Colorpicker"}
 
 				local ColorSelection = Create("ImageLabel", {
 					Size = UDim2.new(0, 18, 0, 18),
@@ -1575,9 +1566,6 @@ function OrionLib:MakeWindow(WindowConfig)
 				end
 
 				Colorpicker:Set(Colorpicker.Value)
-				if ColorpickerConfig.Flag then				
-					OrionLib.Flags[ColorpickerConfig.Flag] = Colorpicker
-				end
 				return Colorpicker
 			end  
 			return ElementFunction   
